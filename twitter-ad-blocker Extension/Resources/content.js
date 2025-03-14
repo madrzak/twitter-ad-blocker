@@ -12,7 +12,7 @@ let adsBlockedCount = 0;
 function hideTwitterAds() {
     const adSelectors = [
         '[aria-label="Ad"]', // Explicitly labeled ads
-        '[data-testid="placementTracking"]', // Promoted tweets
+        // '[data-testid="placementTracking"]', // Promoted tweets
         'div[data-testid="top-impression-pixel"]', // Impression pixels
         'div[data-testid="bottom-impression-pixel"]',
         'div[data-testid="right-impression-pixel"]',
