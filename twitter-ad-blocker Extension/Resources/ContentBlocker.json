@@ -6,7 +6,7 @@
     },
     "action": {
       "type": "css-display-none",
-      "selector": "[data-testid='placementTracking'], [aria-label='Ad'], span:contains('Promoted'), div[data-testid='tweet'] a[rel='noopener noreferrer nofollow'], div[data-testid^='UserAvatar-Container-']"
+      "selector": "[data-testid='placementTracking'], [aria-label='Ad'], div[data-testid='top-impression-pixel'], div[data-testid='bottom-impression-pixel'], div[data-testid='right-impression-pixel'], div[data-testid='left-impression-pixel'], a[href*='referring_page=ad_static_general'], a[href*='premium_sign_up']"
     }
   }
 ] 

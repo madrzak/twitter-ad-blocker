@@ -11,12 +11,36 @@ let adsBlockedCount = 0;
 
 function hideTwitterAds() {
     const adSelectors = [
-        '[data-testid="placementTracking"]', // Most promoted tweets
         '[aria-label="Ad"]', // Explicitly labeled ads
-        'span:contains("Promoted")', // Promoted label
-        'div[data-testid="tweet"] a[rel="noopener noreferrer nofollow"]', // External ad links
-        'div[data-testid^="UserAvatar-Container-"]' // Some promoted avatars
+        '[data-testid="placementTracking"]', // Promoted tweets
+        'div[data-testid="top-impression-pixel"]', // Impression pixels
+        'div[data-testid="bottom-impression-pixel"]',
+        'div[data-testid="right-impression-pixel"]',
+        'div[data-testid="left-impression-pixel"]',
+        'a[href*="referring_page=ad_static_general"]', // Ad tracking links
+        'a[href*="premium_sign_up"]' // "Subscribe to Premium" ads
+        // Removed the UserAvatar-Container selector that was hiding legitimate profile pictures
     ];
+
+    // Check for promoted content in spans
+    const promotedElements = document.querySelectorAll('span');
+    promotedElements.forEach(element => {
+        if (element.textContent.includes('Promoted') && !element.dataset.hidden) {
+            const tweetContainer = element.closest('[data-testid="tweet"]');
+            if (tweetContainer) {
+                console.log(`❌ Hiding Twitter/X Ad: "${tweetContainer.innerText.slice(0, 100)}..."`);
+                tweetContainer.style.display = "none";
+                tweetContainer.dataset.hidden = "true";
+                
+                // Increment counter and update storage
+                adsBlockedCount++;
+                browser.storage.local.set({ 'adsBlocked': adsBlockedCount });
+                
+                // Report to background script
+                browser.runtime.sendMessage({ adBlocked: tweetContainer.innerText.slice(0, 50) });
+            }
+        }
+    });
 
     adSelectors.forEach(selector => {
         document.querySelectorAll(selector).forEach(ad => {
