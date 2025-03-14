@@ -1,0 +1,12 @@
+[
+  {
+    "trigger": {
+      "url-filter": ".*",
+      "if-domain": ["twitter.com", "x.com"]
+    },
+    "action": {
+      "type": "css-display-none",
+      "selector": "[data-testid='placementTracking'], [aria-label='Ad'], span:contains('Promoted'), div[data-testid='tweet'] a[rel='noopener noreferrer nofollow'], div[data-testid^='UserAvatar-Container-']"
+    }
+  }
+] 
