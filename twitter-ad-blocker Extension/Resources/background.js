@@ -9,11 +9,17 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // Could be used for counting blocked ads or other statistics
         return Promise.resolve({ status: "recorded" });
     }
+    
+    if (request.adMarked) {
+        console.log(`Ad marked: ${request.adMarked}`);
+        // Could be used for counting marked ads or other statistics
+        return Promise.resolve({ status: "recorded" });
+    }
 });
 
 // Log when extension is installed or updated
 browser.runtime.onInstalled.addListener((details) => {
-    console.log("Twitter/X Ad Blocker installed/updated:", details.reason);
+    console.log("Twitter/X Ad Blocker & Marker installed/updated:", details.reason);
 });
 
-console.log("Twitter/X Ad Blocker background script running");
+console.log("Twitter/X Ad Blocker & Marker background script running");

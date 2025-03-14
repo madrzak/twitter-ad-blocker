@@ -2,12 +2,15 @@ console.log("Hello World!", browser);
 
 // Initialize the popup
 document.addEventListener('DOMContentLoaded', function() {
-    // Get stored ad count or initialize to 0
-    browser.storage.local.get('adsBlocked').then(result => {
-        const count = result.adsBlocked || 0;
-        document.getElementById('count').textContent = count;
+    // Get stored ad counts
+    browser.storage.local.get(['adsBlocked', 'adsMarked']).then(result => {
+        const blockedCount = result.adsBlocked || 0;
+        const markedCount = result.adsMarked || 0;
+        
+        document.getElementById('blocked-count').textContent = blockedCount;
+        document.getElementById('marked-count').textContent = markedCount;
     }).catch(error => {
-        console.error('Error getting ad count:', error);
+        console.error('Error getting ad counts:', error);
     });
     
     // Check if we're on Twitter/X
@@ -28,4 +31,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-console.log("Twitter/X Ad Blocker popup script loaded");
+console.log("Twitter/X Ad Blocker & Marker popup script loaded");

@@ -6,7 +6,7 @@
     },
     "action": {
       "type": "css-display-none",
-      "selector": "[data-testid='placementTracking'], [aria-label='Ad'], div[data-testid='top-impression-pixel'], div[data-testid='bottom-impression-pixel'], div[data-testid='right-impression-pixel'], div[data-testid='left-impression-pixel'], a[href*='referring_page=ad_static_general'], a[href*='premium_sign_up']"
+      "selector": "div[data-testid='top-impression-pixel'], div[data-testid='bottom-impression-pixel'], div[data-testid='right-impression-pixel'], div[data-testid='left-impression-pixel'], a[href*='premium_sign_up'], div[data-testid='inlinePrompt'], aside[aria-label='Subscribe to Premium'], aside[aria-label='Who to follow'], div[aria-label='Timeline: Trending now']"
     }
   }
 ] 
