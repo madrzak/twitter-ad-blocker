@@ -134,6 +134,15 @@ input:checked + .slider:before {
     transform: translateX(20px);
 }
 
+.toggle input:disabled + .slider {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.toggle input:disabled + .slider:before {
+    background-color: #999;
+}
+
 @media (prefers-color-scheme: dark) {
     :root {
         --text-color: #ffffff;
@@ -155,5 +164,13 @@ input:checked + .slider:before {
     
     input:checked + .slider:before {
         background-color: white;
+    }
+    
+    .toggle input:disabled + .slider {
+        background-color: #243447;
+    }
+    
+    .toggle input:disabled + .slider:before {
+        background-color: #38444D;
     }
 }

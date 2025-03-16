@@ -233,6 +233,11 @@ function markPromotedTweets() {
 }
 
 function applyFilters() {
+    // Only apply filters on the home page
+    if (!window.location.pathname.endsWith('/home')) {
+        return;
+    }
+    
     // Get all tweets
     const tweets = document.querySelectorAll('article[role="article"]');
     
@@ -243,7 +248,7 @@ function applyFilters() {
             // Default to hiding when any filter is active
             shouldShow = false;
             
-            if (filterLowEngagementVerified) {
+            if (filterLowEngagementVerified && !filterHighViews) {
                 const isVerified = tweet.querySelector('[data-testid="icon-verified"]') !== null;
                 const likeCount = getLikeCount(tweet);
                 if (isVerified && likeCount < 3) {
@@ -251,9 +256,19 @@ function applyFilters() {
                 }
             }
             
-            if (filterHighViews) {
+            if (filterHighViews && !filterLowEngagementVerified) {
                 const viewCount = getViewCount(tweet);
-                if (viewCount >= 1000) {
+                if (viewCount > 1000) {
+                    shouldShow = true;
+                }
+            }
+            
+            // If both filters are active, post must satisfy both conditions
+            if (filterHighViews && filterLowEngagementVerified) {
+                const isVerified = tweet.querySelector('[data-testid="icon-verified"]') !== null;
+                const likeCount = getLikeCount(tweet);
+                const viewCount = getViewCount(tweet);
+                if (isVerified && likeCount < 3 && viewCount > 1000) {
                     shouldShow = true;
                 }
             }
