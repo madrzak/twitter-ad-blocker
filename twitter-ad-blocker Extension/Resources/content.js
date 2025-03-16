@@ -4,11 +4,25 @@ browser.runtime.sendMessage({ greeting: "hello" }).then((response) => {
 
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log("Received request: ", request);
+    
+    if (request.action === 'updateFilters') {
+        if (request.filters.hasOwnProperty('lowEngagementVerified')) {
+            filterLowEngagementVerified = request.filters.lowEngagementVerified;
+        }
+        if (request.filters.hasOwnProperty('highViews')) {
+            filterHighViews = request.filters.highViews;
+        }
+        applyFilters();
+    }
 });
 
 // Track how many ads we've blocked or marked
 let adsBlockedCount = 0;
 let adsMarkedCount = 0;
+
+// Add filter state variables
+let filterLowEngagementVerified = false;
+let filterHighViews = false;
 
 // Create and inject CSS for the promoted badge
 function injectStyles() {
@@ -218,6 +232,72 @@ function markPromotedTweets() {
     });
 }
 
+function applyFilters() {
+    // Get all tweets
+    const tweets = document.querySelectorAll('article[role="article"]');
+    
+    tweets.forEach(tweet => {
+        let shouldShow = true;
+        
+        if (filterLowEngagementVerified || filterHighViews) {
+            // Default to hiding when any filter is active
+            shouldShow = false;
+            
+            if (filterLowEngagementVerified) {
+                const isVerified = tweet.querySelector('[data-testid="icon-verified"]') !== null;
+                const likeCount = getLikeCount(tweet);
+                if (isVerified && likeCount < 3) {
+                    shouldShow = true;
+                }
+            }
+            
+            if (filterHighViews) {
+                const viewCount = getViewCount(tweet);
+                if (viewCount >= 1000) {
+                    shouldShow = true;
+                }
+            }
+        }
+        
+        // Apply visibility
+        tweet.style.display = shouldShow ? '' : 'none';
+    });
+}
+
+function getLikeCount(tweet) {
+    const likeElement = tweet.querySelector('[data-testid="like"] [class*="r-bcqeeo"]');
+    if (!likeElement) return 999; // If can't determine, assume high number
+    
+    const likeText = likeElement.textContent.trim();
+    if (!likeText) return 999;
+    
+    // Parse like count, handling K/M suffixes
+    if (likeText.includes('K')) {
+        return parseFloat(likeText) * 1000;
+    } else if (likeText.includes('M')) {
+        return parseFloat(likeText) * 1000000;
+    } else {
+        return parseInt(likeText) || 999;
+    }
+}
+
+function getViewCount(tweet) {
+    const viewElement = tweet.querySelector('[aria-label*="views"]');
+    if (!viewElement) return 0; // If can't determine, assume low number
+    
+    const viewText = viewElement.textContent.trim();
+    if (!viewText) return 0;
+    
+    // Parse view count, handling K/M suffixes
+    if (viewText.includes('K')) {
+        return parseFloat(viewText) * 1000;
+    } else if (viewText.includes('M')) {
+        return parseFloat(viewText) * 1000000;
+    } else {
+        return parseInt(viewText) || 0;
+    }
+}
+
 // Get existing counts from storage
 browser.storage.local.get(['adsBlocked', 'adsMarked']).then(result => {
     adsBlockedCount = result.adsBlocked || 0;
@@ -226,11 +306,27 @@ browser.storage.local.get(['adsBlocked', 'adsMarked']).then(result => {
     console.error('Error getting ad counts:', error);
 });
 
+// Get filter states from storage
+browser.storage.local.get(['lowEngagementVerified', 'highViews']).then(result => {
+    filterLowEngagementVerified = result.lowEngagementVerified || false;
+    filterHighViews = result.highViews || false;
+    if (filterLowEngagementVerified || filterHighViews) {
+        applyFilters();
+    }
+}).catch(error => {
+    console.error('Error getting filter states:', error);
+});
+
 // Inject our custom styles
 injectStyles();
 
 // Monitor Twitter's dynamically loaded feed
-const observer = new MutationObserver(processTwitterContent);
+const observer = new MutationObserver(() => {
+    processTwitterContent();
+    if (filterLowEngagementVerified || filterHighViews) {
+        applyFilters();
+    }
+});
 observer.observe(document.body, { childList: true, subtree: true });
 
 // Initial execution to catch existing ads

@@ -3,14 +3,45 @@ console.log("Hello World!", browser);
 // Initialize the popup
 document.addEventListener('DOMContentLoaded', function() {
     // Get stored ad counts
-    browser.storage.local.get(['adsBlocked', 'adsMarked']).then(result => {
+    browser.storage.local.get(['adsBlocked', 'adsMarked', 'lowEngagementVerified', 'highViews']).then(result => {
         const blockedCount = result.adsBlocked || 0;
         const markedCount = result.adsMarked || 0;
         
         document.getElementById('blocked-count').textContent = blockedCount;
         document.getElementById('marked-count').textContent = markedCount;
+        
+        // Set toggle states from storage
+        document.getElementById('low-engagement-verified').checked = result.lowEngagementVerified || false;
+        document.getElementById('high-views').checked = result.highViews || false;
     }).catch(error => {
-        console.error('Error getting ad counts:', error);
+        console.error('Error getting stored data:', error);
+    });
+    
+    // Add toggle event listeners
+    document.getElementById('low-engagement-verified').addEventListener('change', function(e) {
+        const isChecked = e.target.checked;
+        browser.storage.local.set({ lowEngagementVerified: isChecked });
+        
+        // Send message to content script to update filtering
+        browser.tabs.query({active: true, currentWindow: true}).then(tabs => {
+            browser.tabs.sendMessage(tabs[0].id, {
+                action: 'updateFilters',
+                filters: { lowEngagementVerified: isChecked }
+            });
+        });
+    });
+    
+    document.getElementById('high-views').addEventListener('change', function(e) {
+        const isChecked = e.target.checked;
+        browser.storage.local.set({ highViews: isChecked });
+        
+        // Send message to content script to update filtering
+        browser.tabs.query({active: true, currentWindow: true}).then(tabs => {
+            browser.tabs.sendMessage(tabs[0].id, {
+                action: 'updateFilters',
+                filters: { highViews: isChecked }
+            });
+        });
     });
     
     // Check if we're on Twitter/X
