@@ -49,10 +49,56 @@ h1 {
 }
 
 .stats {
+    margin: 15px 0;
     padding: 12px;
-    border: 1px solid var(--border-color);
+    background-color: #16181c;
     border-radius: 8px;
-    margin-bottom: 16px;
+}
+
+.stats h2 {
+    font-size: 14px;
+    color: #e7e9ea;
+    margin: 0 0 8px 0;
+}
+
+.stats p {
+    margin: 4px 0;
+    color: #71767b;
+    font-size: 14px;
+}
+
+.stats p span {
+    color: #e7e9ea;
+    font-weight: 500;
+}
+
+.stats.today {
+    background-color: #1d2025;
+    margin-top: -5px;
+    border-top: 1px solid #2f3336;
+}
+
+@media (prefers-color-scheme: light) {
+    .stats {
+        background-color: #f7f9f9;
+    }
+    
+    .stats h2 {
+        color: #0f1419;
+    }
+    
+    .stats p {
+        color: #536471;
+    }
+    
+    .stats p span {
+        color: #0f1419;
+    }
+    
+    .stats.today {
+        background-color: #eff3f4;
+        border-top: 1px solid #cfd9de;
+    }
 }
 
 .footer {

@@ -89,12 +89,78 @@ function injectStyles() {
     document.head.appendChild(style);
 }
 
+// Helper function to get today's date key
+function getTodayKey() {
+    const today = new Date();
+    return `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+}
+
+// Function to update stats
+function updateStats(type) {
+    browser.storage.local.get(['adsBlocked', 'adsMarked', 'dailyStats']).then(result => {
+        const totalBlocked = (result.adsBlocked || 0) + (type === 'blocked' ? 1 : 0);
+        const totalMarked = (result.adsMarked || 0) + (type === 'marked' ? 1 : 0);
+        
+        // Update daily stats
+        const dailyStats = result.dailyStats || {};
+        const todayKey = getTodayKey();
+        if (!dailyStats[todayKey]) {
+            dailyStats[todayKey] = { blocked: 0, marked: 0 };
+        }
+        
+        if (type === 'blocked') {
+            dailyStats[todayKey].blocked++;
+        } else if (type === 'marked') {
+            dailyStats[todayKey].marked++;
+        }
+        
+        // Store updated stats
+        browser.storage.local.set({
+            adsBlocked: totalBlocked,
+            adsMarked: totalMarked,
+            dailyStats: dailyStats
+        });
+        
+        // Notify popup of updated stats
+        browser.runtime.sendMessage({
+            type: 'statsUpdate',
+            totalBlocked,
+            totalMarked,
+            todayBlocked: dailyStats[todayKey].blocked,
+            todayMarked: dailyStats[todayKey].marked
+        });
+    });
+}
+
+// Update the processTwitterContent function to use the new updateStats function
 function processTwitterContent() {
-    // FEATURE 1: Block ads completely
-    blockAds();
+    const tweets = document.querySelectorAll('article[role="article"]');
     
-    // FEATURE 2: Mark promoted tweets
-    markPromotedTweets();
+    tweets.forEach(tweet => {
+        if (tweet.hasAttribute('data-ad-processed')) {
+            return;
+        }
+        tweet.setAttribute('data-ad-processed', 'true');
+        
+        const promotedText = tweet.textContent.toLowerCase();
+        if (promotedText.includes('promoted')) {
+            if (!tweet.hasAttribute('data-ad-marked')) {
+                tweet.setAttribute('data-ad-marked', 'true');
+                updateStats('marked');
+                
+                const badge = document.createElement('div');
+                badge.className = 'promoted-badge';
+                badge.textContent = 'AD';
+                tweet.appendChild(badge);
+            }
+            
+            if (!tweet.hasAttribute('data-ad-blocked')) {
+                tweet.setAttribute('data-ad-blocked', 'true');
+                updateStats('blocked');
+                tweet.style.display = 'none';
+            }
+        }
+    });
 }
 
 function blockAds() {
