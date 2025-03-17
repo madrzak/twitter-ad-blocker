@@ -6,11 +6,31 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log("Received request: ", request);
     
     if (request.action === 'updateFilters') {
+        if (request.filters.hasOwnProperty('verifiedOnly')) {
+            verifiedOnly = request.filters.verifiedOnly;
+            // Reset other filters when verified-only is enabled
+            if (verifiedOnly) {
+                filterLowEngagementVerified = false;
+                filterHighViews = false;
+            }
+            // Reset processed state when filter changes
+            document.querySelectorAll('[data-filter-processed]').forEach(tweet => {
+                tweet.removeAttribute('data-filter-processed');
+            });
+        }
         if (request.filters.hasOwnProperty('lowEngagementVerified')) {
             filterLowEngagementVerified = request.filters.lowEngagementVerified;
+            // Reset processed state when filter changes
+            document.querySelectorAll('[data-filter-processed]').forEach(tweet => {
+                tweet.removeAttribute('data-filter-processed');
+            });
         }
         if (request.filters.hasOwnProperty('highViews')) {
             filterHighViews = request.filters.highViews;
+            // Reset processed state when filter changes
+            document.querySelectorAll('[data-filter-processed]').forEach(tweet => {
+                tweet.removeAttribute('data-filter-processed');
+            });
         }
         applyFilters();
     }
@@ -20,9 +40,23 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
 let adsBlockedCount = 0;
 let adsMarkedCount = 0;
 
-// Add filter state variables
+// Add verifiedOnly to the state tracking
+let verifiedOnly = false;
 let filterLowEngagementVerified = false;
 let filterHighViews = false;
+
+// Add debounce function at the top level
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
 
 // Create and inject CSS for the promoted badge
 function injectStyles() {
@@ -238,18 +272,25 @@ function applyFilters() {
         return;
     }
     
-    // Get all tweets
-    const tweets = document.querySelectorAll('article[role="article"]');
+    console.log("Applying filters - Verified Only:", verifiedOnly, "High Views:", filterHighViews, "Low Engagement Verified:", filterLowEngagementVerified);
+    
+    // Get all tweets that haven't been processed yet
+    const tweets = document.querySelectorAll('article[role="article"]:not([data-filter-processed])');
     
     tweets.forEach(tweet => {
-        let shouldShow = true;
+        // Mark as processed
+        tweet.setAttribute('data-filter-processed', 'true');
         
-        if (filterLowEngagementVerified || filterHighViews) {
+        let shouldShow = true;
+        const isVerified = tweet.querySelector('[data-testid="icon-verified"]') !== null;
+        
+        if (verifiedOnly) {
+            shouldShow = isVerified;
+        } else if (filterLowEngagementVerified || filterHighViews) {
             // Default to hiding when any filter is active
             shouldShow = false;
             
             if (filterLowEngagementVerified && !filterHighViews) {
-                const isVerified = tweet.querySelector('[data-testid="icon-verified"]') !== null;
                 const likeCount = getLikeCount(tweet);
                 if (isVerified && likeCount < 3) {
                     shouldShow = true;
@@ -258,6 +299,7 @@ function applyFilters() {
             
             if (filterHighViews && !filterLowEngagementVerified) {
                 const viewCount = getViewCount(tweet);
+                console.log("Tweet views:", viewCount);
                 if (viewCount > 1000) {
                     shouldShow = true;
                 }
@@ -265,7 +307,6 @@ function applyFilters() {
             
             // If both filters are active, post must satisfy both conditions
             if (filterHighViews && filterLowEngagementVerified) {
-                const isVerified = tweet.querySelector('[data-testid="icon-verified"]') !== null;
                 const likeCount = getLikeCount(tweet);
                 const viewCount = getViewCount(tweet);
                 if (isVerified && likeCount < 3 && viewCount > 1000) {
@@ -273,6 +314,9 @@ function applyFilters() {
                 }
             }
         }
+        
+        // Store the filter state on the tweet
+        tweet.setAttribute('data-should-show', shouldShow);
         
         // Apply visibility
         tweet.style.display = shouldShow ? '' : 'none';
@@ -335,14 +379,43 @@ browser.storage.local.get(['lowEngagementVerified', 'highViews']).then(result =>
 // Inject our custom styles
 injectStyles();
 
-// Monitor Twitter's dynamically loaded feed
-const observer = new MutationObserver(() => {
+// Create a debounced version of applyFilters
+const debouncedApplyFilters = debounce(applyFilters, 250);
+
+// Modify the observer to use the debounced function
+const observer = new MutationObserver((mutations) => {
+    let shouldApplyFilters = false;
+    
+    for (const mutation of mutations) {
+        if (mutation.addedNodes.length > 0) {
+            // Check if any of the added nodes are tweets or contain tweets
+            for (const node of mutation.addedNodes) {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    if (node.matches('article[role="article"]') || 
+                        node.querySelector('article[role="article"]')) {
+                        shouldApplyFilters = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    
     processTwitterContent();
+    
+    if (shouldApplyFilters && (filterLowEngagementVerified || filterHighViews)) {
+        debouncedApplyFilters();
+    }
+});
+
+// Add scroll event listener for infinite scroll handling
+const scrollHandler = debounce(() => {
     if (filterLowEngagementVerified || filterHighViews) {
         applyFilters();
     }
-});
-observer.observe(document.body, { childList: true, subtree: true });
+}, 250);
+
+window.addEventListener('scroll', scrollHandler);
 
 // Initial execution to catch existing ads
 processTwitterContent();
